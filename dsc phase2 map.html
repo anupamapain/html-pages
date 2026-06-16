@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Udyamie Phase 2 — Proposed Operational Area</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root{--ink:#1f2937;}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);}
+  #wrap{display:flex;height:100vh;width:100%;}
+  #map{flex:1;height:100%;}
+  #side{width:340px;max-width:44vw;height:100%;overflow-y:auto;background:#fff;border-left:1px solid #e5e7eb;box-sizing:border-box;padding:16px 16px 40px;}
+  h1{font-size:17px;margin:0 0 2px;}
+  .sub{font-size:12px;color:#6b7280;margin:0 0 12px;}
+  .tot{background:#111827;color:#fff;border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+  .tot b{font-size:24px;}
+  .tot span{font-size:12px;opacity:.8;}
+  .dcard{border:1px solid #e5e7eb;border-left-width:5px;border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .dcard h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:baseline;}
+  .dcard h3 b{font-size:18px;}
+  .dcard .st{font-size:11px;color:#6b7280;}
+  .dcard .nums{font-size:11.5px;color:#6b7280;margin:3px 0 6px;}
+  .blk{display:inline-block;font-size:11px;background:#f3f4f6;border-radius:20px;padding:2px 9px;margin:2px 3px 0 0;}
+  .blk.focus{background:#fde68a;font-weight:600;}
+  #status{font-size:12px;color:#6b7280;margin-top:6px;padding:8px;background:#f9fafb;border-radius:8px;}
+  .leaflet-popup-content{font-size:13px;margin:10px 12px;}
+  .note{font-size:11px;color:#9ca3af;margin-top:10px;line-height:1.4;}
+  @media(max-width:680px){#wrap{flex-direction:column;}#side{width:100%;max-width:none;height:auto;border-left:none;border-top:1px solid #e5e7eb;}#map{height:55vh;}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="map"></div>
+  <div id="side">
+    <h1>Phase 2 — Proposed Operational Area</h1>
+    <p class="sub">Udyamie micro-entrepreneurship incubation · 18-month outreach</p>
+    <div class="tot"><b>520</b> <span>udyamis targeted across 4 districts · 3 states</span><br>
+      <span>First 12 months: 320 &nbsp;·&nbsp; +6 months: 200</span></div>
+    <div id="cards"></div>
+    <p class="note">Districts are anchored on real OpenStreetMap locations; blocks (talukas / tehsils) are geocoded live and shown as labelled points within each district. Highlighted blocks (Navapur, Meghraj) mark existing/named focus areas.</p>
+    <div id="status">Locating blocks…</div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DISTRICTS=[
+ {name:"Nandurbar",state:"Maharashtra",color:"#2563eb",center:[21.37,74.24],
+  vb:"73.45,22.15,74.95,20.95",t:[90,60,150],
+  blocks:["Nandurbar","Navapur","Shahada","Taloda","Akkalkuwa","Dhadgaon"],focus:["Navapur"]},
+ {name:"Dhule",state:"Maharashtra",color:"#0891b2",center:[20.90,74.77],
+  vb:"73.85,21.65,75.35,20.45",t:[78,55,133],
+  blocks:["Dhule","Sakri","Shirpur","Shindkheda"],focus:[]},
+ {name:"Agar Malwa",state:"Madhya Pradesh",color:"#9333ea",center:[23.71,76.01],
+  vb:"75.35,24.30,76.85,23.00",t:[76,40,116],
+  blocks:["Agar","Susner","Nalkheda","Barod","Tanodia","Kanad"],focus:[]},
+ {name:"Aravalli",state:"Gujarat",color:"#16a34a",center:[23.50,73.45],
+  vb:"72.85,23.95,73.95,22.95",t:[76,45,121],
+  blocks:["Modasa","Malpur","Meghraj","Bhiloda","Dhansura","Bayad"],focus:["Meghraj"]}
+];
+
+const map=L.map('map',{center:[22.4,74.6],zoom:7});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19,attribution:'Tiles &copy; Esri'});
+const labels=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'});
+const satGroup=L.layerGroup([sat,labels]).addTo(map);
+L.control.layers({"Satellite":satGroup,"Streets":streets},null,{position:'topright'}).addTo(map);
+L.control.scale({imperial:false}).addTo(map);
+
+// sidebar cards
+cards.innerHTML=DISTRICTS.map(d=>`
+ <div class="dcard" style="border-left-color:${d.color}">
+   <h3><span>${d.name} <span class="st">· ${d.state}</span></span><b style="color:${d.color}">${d.t[2]}</b></h3>
+   <div class="nums">First 12 mo: ${d.t[0]} &nbsp;+6 mo: ${d.t[1]}</div>
+   <div>${d.blocks.map(b=>`<span class="blk ${d.focus.includes(b)?'focus':''}">${b}</span>`).join('')}</div>
+ </div>`).join('');
+
+const CACHE_KEY='udyamie_phase2_geo_v1';
+let cache={};try{cache=JSON.parse(localStorage.getItem(CACHE_KEY))||{};}catch(e){}
+const saveCache=()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache));}catch(e){}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function geocode(key,query,vb){
+  if(cache[key])return cache[key];
+  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&viewbox=${vb}&bounded=1`;
+  try{const r=await fetch(url);const j=await r.json();
+    if(j&&j.length){cache[key]=[+j[0].lat,+j[0].lon];saveCache();return cache[key];}}catch(e){}
+  return null;
+}
+function blockIcon(color,focus){
+  return L.divIcon({className:'',iconSize:[12,12],iconAnchor:[6,6],
+   html:`<div style="width:11px;height:11px;border-radius:50%;background:${focus?'#f59e0b':color};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)"></div>`});
+}
+function districtIcon(d){
+  return L.divIcon({className:'',iconSize:[1,1],
+   html:`<div style="transform:translate(-50%,-130%);white-space:nowrap;background:${d.color};color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:7px;box-shadow:0 2px 6px rgba(0,0,0,.3)">${d.name} · ${d.t[2]}</div>`});
+}
+
+const bounds=L.latLngBounds([]);
+let done=0,total=DISTRICTS.reduce((s,d)=>s+d.blocks.length,0),failed=[];
+(async()=>{
+  for(const d of DISTRICTS){
+    const blkPts=[];
+    for(const b of d.blocks){
+      const key=d.name+"|"+b;
+      const loc=await geocode(key,`${b}, ${d.name}, ${d.state}, India`,d.vb);
+      if(loc){
+        blkPts.push(loc);bounds.extend(loc);
+        const focus=d.focus.includes(b);
+        L.marker(loc,{icon:blockIcon(d.color,focus)}).addTo(map)
+         .bindTooltip(b+(focus?' ★':''),{permanent:true,direction:'right',className:'blktip',offset:[6,0]})
+         .bindPopup(`<b>${b}</b> block<br><small>${d.name} district, ${d.state}</small>`);
+        await sleep(1100);
+      } else failed.push(b+" ("+d.name+")");
+      done++;status.textContent=`Locating blocks… ${done}/${total}`;
+    }
+    // district headline label + soft circle
+    const c=blkPts.length?[blkPts.reduce((s,p)=>s+p[0],0)/blkPts.length,blkPts.reduce((s,p)=>s+p[1],0)/blkPts.length]:d.center;
+    L.circle(c,{radius:38000,color:d.color,weight:1.5,fillColor:d.color,fillOpacity:0.07}).addTo(map);
+    L.marker(c,{icon:districtIcon(d),interactive:false,zIndexOffset:1000}).addTo(map);
+    bounds.extend(d.center);
+  }
+  if(bounds.isValid())map.fitBounds(bounds.pad(0.2));
+  status.innerHTML=`<b>${total-failed.length}</b> of ${total} blocks located via OpenStreetMap.`+
+    (failed.length?`<br>Not auto-located: ${failed.join(', ')}.`:'');
+})();
+</script>
+<style>.blktip{background:rgba(255,255,255,.85);border:none;box-shadow:none;font-size:11px;font-weight:600;color:#111827;padding:1px 4px;}</style>
+</body>
+</html>

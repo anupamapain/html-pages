@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Udyamie Pilot — Navapur Block, Nandurbar</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root{--svc:#2563eb;--trade:#ea580c;--agri:#16a34a;--mfg:#9333ea;--ink:#1f2937;}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);}
+  #wrap{display:flex;height:100vh;width:100%;}
+  #map{flex:1;height:100%;}
+  #side{width:320px;max-width:42vw;height:100%;overflow-y:auto;background:#fff;border-left:1px solid #e5e7eb;box-sizing:border-box;padding:16px 16px 40px;}
+  h1{font-size:17px;margin:0 0 2px;}
+  .sub{font-size:12px;color:#6b7280;margin:0 0 12px;}
+  .stat{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .pill{background:#f3f4f6;border-radius:8px;padding:6px 10px;font-size:12px;}
+  .pill b{font-size:15px;display:block;}
+  .legend h3,.brk h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin:14px 0 6px;}
+  .lrow{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;}
+  .dot{width:13px;height:13px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+  .bar{height:8px;border-radius:4px;}
+  .brow{font-size:12.5px;margin:7px 0;}
+  .brow .top{display:flex;justify-content:space-between;}
+  #status{font-size:12px;color:#6b7280;margin-top:10px;padding:8px;background:#f9fafb;border-radius:8px;}
+  .leaflet-popup-content{font-size:13px;line-height:1.4;margin:10px 12px;}
+  .pop h4{margin:0 0 6px;font-size:13px;}
+  .pop ul{margin:0;padding-left:0;list-style:none;}
+  .pop li{margin:4px 0;padding-left:14px;position:relative;}
+  .pop li:before{content:"";position:absolute;left:0;top:5px;width:7px;height:7px;border-radius:50%;background:var(--c);}
+  .pop small{color:#6b7280;}
+  @media(max-width:680px){#wrap{flex-direction:column;}#side{width:100%;max-width:none;height:auto;border-left:none;border-top:1px solid #e5e7eb;}#map{height:55vh;}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="map"></div>
+  <div id="side">
+    <h1>Udyamie Pilot — Navapur Block</h1>
+    <p class="sub">Nandurbar district, Maharashtra · 18-month pilot</p>
+    <div class="stat">
+      <div class="pill"><b id="nUd">—</b>Udyamis</div>
+      <div class="pill"><b id="nVil">—</b>Villages</div>
+      <div class="pill"><b>4</b>Industries</div>
+    </div>
+    <div class="legend">
+      <h3>Industry</h3>
+      <div class="lrow"><span class="dot" style="background:var(--svc)"></span>Service <span id="cSvc" style="margin-left:auto;color:#6b7280"></span></div>
+      <div class="lrow"><span class="dot" style="background:var(--trade)"></span>Trading <span id="cTrade" style="margin-left:auto;color:#6b7280"></span></div>
+      <div class="lrow"><span class="dot" style="background:var(--agri)"></span>Agri &amp; agri-allied <span id="cAgri" style="margin-left:auto;color:#6b7280"></span></div>
+      <div class="lrow"><span class="dot" style="background:var(--mfg)"></span>Manufacturing <span id="cMfg" style="margin-left:auto;color:#6b7280"></span></div>
+    </div>
+    <div class="brk">
+      <h3>Villages by udyamis</h3>
+      <div id="villageList"></div>
+    </div>
+    <div id="status">Locating villages…</div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const COLORS={service:'#2563eb',trading:'#ea580c','agri & agri allied':'#16a34a',manufacturing:'#9333ea'};
+const UD=[
+["promod gavit","lahan kadwan","welding & fabrication shop","service"],
+["yohan valvi","nagare","puncture repair","service"],
+["nitesh vasave","mograni fata","2 wheeler repair & spare part sales","service"],
+["nitin vinayak gavit","khandbara","tailoring","service"],
+["yuvraj arvind vasave","visarwadi","mobile repair & sale","service"],
+["swapnil jitendra vasave","sonare","photography","service"],
+["mahesh gavit","ghogalpada","rice & flour mill","agri & agri allied"],
+["manisha suman gavit","mothi kadwan","grocery store","trading"],
+["vinay kokani","nimboni","poultry","agri & agri allied"],
+["mainabai vinod valvi","vatvi highway","tea & food stall","service"],
+["samuvel gavit","visarwadi","saloon","service"],
+["mira ganesh kokani","mograni","cutlery shop","trading"],
+["kailash naik","khandbara","csc (common service centre)","service"],
+["sandip vasave","khandbara","garments shop","trading"],
+["vishwash gavit","bhadwad","krishi seva kendra","agri & agri allied"],
+["sanjay gavit","bhadwad","panipuri & papad making","manufacturing"],
+["munna vasant gavit","bhardu","soap sale","trading"],
+["anita kokani","palsun","beauty parlour","service"],
+["sunanda naik","karnjali","papad & kurdai making","manufacturing"],
+["nishant vasave","khandbara","tea & food stall","service"],
+["masiha vasave","visarwadi","snack stall","service"],
+["mogita gavit","khadkipada","dairy","agri & agri allied"],
+["sandip rohidas valvi","ghogalpada","grocery store","trading"],
+["sarila kishal valvi","bardipada","tailoring","service"],
+["nitin bhuta gaikwad","waghale","mobile repair & sale","service"],
+["kiran diwanji gavit","bhardu","welding & fabrication shop","service"],
+["suraj shrikant vasave","khandbara","2 wheeler repair","service"],
+["vishal dilvarsing gavit","bhadwad","saloon","service"],
+["yuvraj chunnilal kokani","harnipada","motor cycle repairing & welding","service"],
+["ajay shamrav padavi","sundarde","centering contractor","service"],
+["pushpa krushna mali","sundarde","beauty parlour","service"],
+["minabai anil mali","sundarde","flour mill","agri & agri allied"],
+["laxmi krushna padavi","sundarde","tailoring","service"],
+["virsing laksu valvi","bhadwad","rice mill","agri & agri allied"],
+["saripa gamu valvi","bhadwad","snack stall","service"],
+["ashish sakharam gavit","bhadwad","electronic shop & mobile repairing","service"],
+["kalpesh anil vasave","aarditara","welding & fabrication shop","service"],
+["jyoti anil kokani","saindani pada mograni","tailoring","service"],
+["anil bhavrav kokani","saindani pada mograni","saloon","service"],
+["vipul aalu gavit","jamda","aluminum & welding","service"],
+["ravindr ramesh gavit","visarwadi","csc (common service centre)","service"],
+["bhanudas bharat valvi","dogegaon","welding & fabrication shop","service"],
+["chaya nagesh naik","sundarde","tailoring","service"],
+["rakesh barkya valvi","waghale","motor repairing","service"],
+["yuvraj vikram naik","borchak","mobile repair","service"],
+["neha sandip valvi","bardipada","snack stall","service"],
+["santosh kumar kokani","mograni","nursery","agri & agri allied"],
+["rohini sagar valvi","talavipada","masala making","manufacturing"],
+["rohida pradip gavit","talavipada","vermicompost","agri & agri allied"],
+["rina madhukar valvi","aarditara","papad making","manufacturing"],
+["sheetal dhanraj valvi","wasalai","water filter servicing","service"],
+["langu dhinsing valvi","borchak","agarbati making","manufacturing"],
+["suvrana rohidas kokani","shrawani","dairy","agri & agri allied"],
+["singa velji kotwal","keli","bamboo craft","manufacturing"],
+["lalita shivaji kokani","khandbara","snack stall","service"]
+].map(r=>({name:r[0],village:r[1],business:r[2],industry:r[3]}));
+
+// normalise messy village names to a cleaner geocoding query within Navapur taluka
+const QFIX={
+ "lahan kadwan":"Kadwan","mothi kadwan":"Kadwan","mograni fata":"Mograni",
+ "saindani pada mograni":"Mograni","vatvi highway":"Vatvi","karnjali":"Karanjali"
+};
+function gq(v){return (QFIX[v]||v);}
+
+const cap=s=>s.replace(/\b\w/g,c=>c.toUpperCase());
+const NAVAPUR=[21.165,73.785];
+// bounding box around Navapur taluka to keep geocoder honest
+const VB="73.55,21.45,74.20,20.92"; // left,top,right,bottom
+
+const map=L.map('map',{center:[21.18,73.86],zoom:11});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19,attribution:'Tiles &copy; Esri'});
+const labels=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19,opacity:0.9});
+const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19,attribution:'&copy; OpenStreetMap'});
+const satGroup=L.layerGroup([sat,labels]).addTo(map);
+L.control.layers({"Satellite":satGroup,"Streets":streets},null,{position:'topright'}).addTo(map);
+L.control.scale({imperial:false}).addTo(map);
+
+// group udyamis by village
+const byVillage={};
+UD.forEach(u=>{(byVillage[u.village]=byVillage[u.village]||[]).push(u);});
+const villages=Object.keys(byVillage);
+
+// counts
+const icount={service:0,trading:0,'agri & agri allied':0,manufacturing:0};
+UD.forEach(u=>icount[u.industry]++);
+nUd.textContent=UD.length;nVil.textContent=villages.length;
+cSvc.textContent=icount.service;cTrade.textContent=icount.trading;
+cAgri.textContent=icount['agri & agri allied'];cMfg.textContent=icount.manufacturing;
+
+// sidebar village list
+villageList.innerHTML=villages.sort((a,b)=>byVillage[b].length-byVillage[a].length)
+ .map(v=>`<div class="brow"><div class="top"><span>${cap(v)}</span><b>${byVillage[v].length}</b></div></div>`).join('');
+
+const CACHE_KEY='udyamie_navapur_geo_v1';
+let cache={};
+try{cache=JSON.parse(localStorage.getItem(CACHE_KEY))||{};}catch(e){}
+function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache));}catch(e){}}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function geocode(village){
+  if(cache[village])return cache[village];
+  const q=encodeURIComponent(gq(village)+", Navapur, Nandurbar, Maharashtra, India");
+  const url=`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&viewbox=${VB}&bounded=1`;
+  try{
+    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(j&&j.length){cache[village]=[+j[0].lat,+j[0].lon];saveCache();return cache[village];}
+  }catch(e){}
+  return null;
+}
+
+function spider(base,i,n){ // small offset so same-village pins don't fully overlap
+  if(n===1)return base;
+  const r=0.0016,a=(2*Math.PI*i)/n;
+  return [base[0]+r*Math.cos(a),base[1]+r*Math.sin(a)];
+}
+function dot(color,solid=true){
+  return L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],
+    html:`<div style="width:14px;height:14px;border-radius:50%;background:${solid?color:'#fff'};border:2px solid ${solid?'#fff':color};box-shadow:0 0 0 1.5px rgba(0,0,0,.3)"></div>`});
+}
+
+const bounds=L.latLngBounds([]);
+let located=0,failed=[];
+(async()=>{
+  for(const v of villages){
+    const loc=await geocode(v);
+    const base=loc||NAVAPUR;
+    if(!loc)failed.push(v);else{located++;bounds.extend(loc);}
+    const list=byVillage[v];
+    list.forEach((u,i)=>{
+      const p=spider(base,i,list.length);
+      const m=L.marker(p,{icon:dot(COLORS[u.industry],!!loc)}).addTo(map);
+      m.bindPopup(`<div class="pop"><h4>${cap(v)}${loc?'':' <small>(approx.)</small>'}</h4>`+
+        `<ul>${list.map(x=>`<li style="--c:${COLORS[x.industry]}"><b>${cap(x.name)}</b><br><small>${x.business}</small></li>`).join('')}</ul></div>`,
+        {maxWidth:280});
+    });
+    status.textContent=`Locating villages… ${located}/${villages.length}`;
+    if(!loc) {} else await sleep(1100); // respect Nominatim 1 req/s
+  }
+  if(bounds.isValid())map.fitBounds(bounds.pad(0.15));
+  status.innerHTML=`<b>${located}</b> of ${villages.length} villages located via OpenStreetMap.`+
+    (failed.length?`<br>Approximate (shown hollow, near Navapur town): ${failed.map(cap).join(', ')}.`:'');
+})();
+</script>
+</body>
+</html>
